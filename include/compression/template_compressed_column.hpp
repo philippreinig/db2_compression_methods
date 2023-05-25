@@ -1,5 +1,4 @@
-
-/*! \example dictionary_compressed_column.hpp
+/*! \example template_compressed_column.hpp
  * This is an example of how to implement a compression technique in our framework. One has to inherit from the abstract
  * base class CoGaDB::CompressedColumn and implement the pure virtual methods.
  */
@@ -10,18 +9,13 @@
 #include "core/global_definitions.hpp"
 
 namespace CoGaDB {
-
-    /*!
-     *  \brief     This class represents a dictionary compressed column with type T, is the base class for all
-     * compressed typed column classes.
-     */
     template<class T>
-    class DictionaryCompressedColumn final : public CompressedColumn<T> {
+    class TemplateCompressedColumn final : public CompressedColumn<T> {
     public:
         /***************** constructors and destructor *****************/
-        explicit DictionaryCompressedColumn(const std::string &name);
+        explicit TemplateCompressedColumn(const std::string &name);
 
-        ~DictionaryCompressedColumn() final;
+        ~TemplateCompressedColumn() final;
 
         void insert(const ColumnType &new_Value) final;
 
@@ -70,97 +64,97 @@ namespace CoGaDB {
     /***************** Start of Implementation Section ******************/
 
     template<class T>
-    DictionaryCompressedColumn<T>::DictionaryCompressedColumn(const std::string &name) : CompressedColumn<T>(name) {
+    TemplateCompressedColumn<T>::TemplateCompressedColumn(const std::string &name) : CompressedColumn<T>(name) {
         //TODO: implement
     }
 
     template<class T>
-    DictionaryCompressedColumn<T>::~DictionaryCompressedColumn() = default;
+    TemplateCompressedColumn<T>::~TemplateCompressedColumn() = default;
 
     template<class T>
-    void DictionaryCompressedColumn<T>::insert(const ColumnType &) {
+    void TemplateCompressedColumn<T>::insert(const ColumnType &) {
         //TODO: implement
     }
 
     template<class T>
-    void DictionaryCompressedColumn<T>::insert(const T &) {
+    void TemplateCompressedColumn<T>::insert(const T &) {
         //TODO: implement
     }
 
     template<typename T>
     template<typename InputIterator>
-    void DictionaryCompressedColumn<T>::insert(InputIterator, InputIterator) {
+    void TemplateCompressedColumn<T>::insert(InputIterator, InputIterator) {
         //TODO: implement
     }
 
     template<class T>
-    ColumnType DictionaryCompressedColumn<T>::get(TID) {
-        //TODO: implement
-        return {};
-    }
-
-    template<class T>
-    std::string DictionaryCompressedColumn<T>::print() const noexcept {
+    ColumnType TemplateCompressedColumn<T>::get(TID) {
         //TODO: implement
         return {};
     }
 
     template<class T>
-    size_t DictionaryCompressedColumn<T>::size() const noexcept {
+    std::string TemplateCompressedColumn<T>::print() const noexcept {
+        //TODO: implement
+        return {};
+    }
+
+    template<class T>
+    size_t TemplateCompressedColumn<T>::size() const noexcept {
         //TODO: implement
         return 0;
     }
 
     template<class T>
-    std::unique_ptr<ColumnBase> DictionaryCompressedColumn<T>::copy() const {
+    std::unique_ptr<ColumnBase> TemplateCompressedColumn<T>::copy() const {
         //TODO: implement
         return {};
     }
 
     template<class T>
-    void DictionaryCompressedColumn<T>::update(TID, const ColumnType &) {
+    void TemplateCompressedColumn<T>::update(TID, const ColumnType &) {
         //TODO: implement
     }
 
     template<class T>
-    void DictionaryCompressedColumn<T>::update(PositionList &, const ColumnType &) {
+    void TemplateCompressedColumn<T>::update(PositionList &, const ColumnType &) {
         //TODO: implement
     }
 
     template<class T>
-    void DictionaryCompressedColumn<T>::remove(TID) {
+    void TemplateCompressedColumn<T>::remove(TID) {
         //TODO: implement
     }
 
     template<class T>
-    void DictionaryCompressedColumn<T>::remove(PositionList &) {
+    void TemplateCompressedColumn<T>::remove(PositionList &) {
         //TODO: implement
     }
 
     template<class T>
-    void DictionaryCompressedColumn<T>::clearContent() {
+    void TemplateCompressedColumn<T>::clearContent() {
         //TODO: implement
     }
 
     template<class T>
-    void DictionaryCompressedColumn<T>::store(const std::string &) {
+    void TemplateCompressedColumn<T>::store(const std::string &) {
         //TODO: implement
     }
 
     template<class T>
-    void DictionaryCompressedColumn<T>::load(const std::string &) {
+    void TemplateCompressedColumn<T>::load(const std::string &) {
         //TODO: implement
     }
 
 
     template<class T>
-    T DictionaryCompressedColumn<T>::operator[](const int) {
+    T TemplateCompressedColumn<T>::operator[](const int) {
         //TODO: implement
         return {};
     }
 
     template<class T>
-    size_t DictionaryCompressedColumn<T>::getSizeInBytes() const noexcept {
+    size_t TemplateCompressedColumn<T>::getSizeInBytes() const noexcept {
         //TODO: implement
         return 0;
     }
