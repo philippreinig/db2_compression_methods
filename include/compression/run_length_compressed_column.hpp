@@ -2,6 +2,9 @@
 
 #include "compressed_column.hpp"
 #include "core/global_definitions.hpp"
+#include "cereal/types/vector.hpp"
+#include "cereal/types/tuple.hpp"
+
 
 namespace CoGaDB {
     template<class T>
@@ -49,22 +52,23 @@ namespace CoGaDB {
         /**
          * @brief Serialization method called by Cereal. Implement this method in your compressed columns to get serialization working.
          */
-        template<class Archive>
+        template<class Archive, class F, class S>
         void serialize(Archive &archive) {
             //TODO: implement
-            archive();// serialize things by passing them to the archive
+            archive(cntElements, values);// serialize things by passing them to the archive
         }
 
     private:
-        int cntElements = 0;
+        unsigned int cntElements = 0;
         std::vector<std::tuple<unsigned int, T>> values;
     };
 
     /***************** Start of Implementation Section ******************/
 
     template<class T>
-    RunLengthCompressedColumn<T>::RunLengthCompressedColumn(const std::string &name) : CompressedColumn<T>(name) {
+    RunLengthCompressedColumn<T>::RunLengthCompressedColumn(const std::string &name) : CompressedColumn<T>(name), cntElements(), values() {
         //TODO: implement
+        //values();            
     }
 
     template<class T>
@@ -73,11 +77,8 @@ namespace CoGaDB {
     template<class T>
     void RunLengthCompressedColumn<T>::insert(const ColumnType &new_Value) {
         //TODO: implement
-        if (new_Value.empty()) return;
-        if (typeid(T) == new_Value.type()) {
-            this->insert(new_Value);
-            return;
-        }
+        T new_value = std::get<T>(new_Value);     
+        this->insert(new_value);            //an eigentliche insert-Funktion übergeben
         return;
     }
 
@@ -85,20 +86,24 @@ namespace CoGaDB {
     void RunLengthCompressedColumn<T>::insert(const T &new_value) {
         //TODO: implement
         if(values.size() == 0) {
-            values.push_back(std::make_tuple(1, new_value));
-        } else if (std::get<1>(values.back()) == new_value) {
-            std::get<0>(values.back())++;
-        } else values.push_back(std::make_tuple(1, new_value));
+            values.push_back(std::make_tuple(1, new_value));    //falls erstes Element, direkt hinzufügen mit 1
+        } 
+        else if (std::get<1>(values.back()) == new_value) {
+            std::get<0>(values.back())++;                       //falls gleiches Element wie das letzte, Häufigkeit hochzählen
+        } 
+        else {
+            values.push_back(std::make_tuple(1, new_value));   //sonst anfügen mit Häufigkeit 1
+        }
         cntElements++;
         return;
     }
 
     template<typename T>
     template<typename InputIterator>
-    void RunLengthCompressedColumn<T>::insert(InputIterator, InputIterator) {
+    void RunLengthCompressedColumn<T>::insert(InputIterator first, InputIterator last) {
         //TODO: implement
-        for (InputIterator it = first; it != last; ++it) { 
-            this->insert(it);
+        for (InputIterator i = first; i != last; ++i) { 
+            this->insert(i);                                //an eigentliche insert-Funktion übergeben
         }
         return;
     }
@@ -107,12 +112,12 @@ namespace CoGaDB {
     ColumnType RunLengthCompressedColumn<T>::get(TID tid) {
         //TODO: implement
         if (cntElements > tid) {
-            int sum = 0;
-            for (int i = 0; i < values.size(); i++) {
-                sum += std:get<0>(values[i]);
+            unsigned int sum = 0;
+            for (unsigned int i = 0; i < values.size(); i++) {
+                sum += std::get<0>(values[i]);                       //Häufigkeiten aufsummieren
 
-                if (tid < sum) {
-                    return std::get<1>(values[i]);
+                if (sum > tid) {
+                    return std::get<1>(values[i]);                  //falls tid kleiner als Summer der Häufigkeit wurd gesuchter Wert gefunden
                 }
             }
         }
@@ -122,7 +127,7 @@ namespace CoGaDB {
     template<class T>
     std::string RunLengthCompressedColumn<T>::print() const noexcept {
         //TODO: implement
-        for (int i = 0; i < values.size(); i++) {
+        for (unsigned int i = 0; i < values.size(); i++) {
             std::cout << "Häufigkeit: " << std::get<0>(values[i]) << " Wert: " << std::get<1>(values[i]) << std::endl;
         }
         return {};
@@ -137,41 +142,40 @@ namespace CoGaDB {
     template<class T>
     std::unique_ptr<ColumnBase> RunLengthCompressedColumn<T>::copy() const {
         //TODO: implement
-        return {};
+        return std::make_unique<RunLengthCompressedColumn<T>>(*this);
     }
 
     template<class T>
     void RunLengthCompressedColumn<T>::update(TID tid, const ColumnType &new_value) {
         //TODO: implement
-        if (new_value.empty() || cntElements <= tid) {
-            return;
-        } else {
-            int sum = 0;
-            for (int i = 0; i < values.size(); i++) {
-                sum += std::get<0>(values[i]);
-                if (tid < sum) {
-                    if (std::get<1>(values[i]) == new_value) {
+            unsigned sum = 0;
+            for (unsigned int i = 0; i < values.size(); i++) {
+                sum += std::get<0>(values[i]);                          //Häufigkeiten aufsummieren
+                if (sum > tid) {                                        //falls zu ersetzender Wert gefunden wurde:
+                    if (std::get<1>(values[i]) == std::get<T>(new_value)) {          //falls neuer Wert = alter Wert, nichts tun
                         return;
                     }
                     if (std::get<0>(values[i]) == 1) {
-                        std::get<1>(values[i]) = new_value;
+                        std::get<1>(values[i]) = std::get<T>(new_value);             //falls alte Häufigkeit = 1, Wert einfach ersetzen
                         return;
                     }
 
-                    std::vector<std::tuple<int, T>> new_values;
+                    std::vector<std::tuple<unsigned int, T>> new_values;
 
-                    for (int j = 0; j < cntElements; j++) {
-                        T value = this->get(j);
+                    for (unsigned int j = 0; j < cntElements; j++) {             //sonst alle Elemente umkopieren und gewünschtes Element ersetzen
+                        T value = std::get<T>(this->get(j));
 
                         if (tid == j) {
-                            value = new_value;
+                            value = std::get<T>(new_value);
                         }
 
                         if (new_values.size() == 0) {
                             new_values.push_back(std::make_tuple(1, value));
-                        } else if (std::get<1>(new_values.back()) == value) {
+                        } 
+                        else if (std::get<1>(new_values.back()) == value) {
                             std::get<0>(new_values.back())++;
-                        } else {
+                        } 
+                        else {
                             new_values.push_back(std::make_tuple(1, value));
                         }
                     }
@@ -179,15 +183,15 @@ namespace CoGaDB {
                     return;
                 }
             }
-        }
         return;
     }
 
     template<class T>
     void RunLengthCompressedColumn<T>::update(PositionList &tid, const ColumnType &new_value) {
         //TODO: implement
-        for (int i = 0; i < tid->size(); i++) {
-            this->update((*tid)[i], new_value);
+        //for (unsigned int i = 0; i < tid->size(); i++) {
+        for (unsigned int tid_: tid) {    
+            this->update(tid_, new_value);               //an eigentliche update-Funktion übergeben
         }
         return;
     }
@@ -195,23 +199,23 @@ namespace CoGaDB {
     template<class T>
     void RunLengthCompressedColumn<T>::remove(TID tid) {
         //TODO: implement
-        int sum = 0;
-        for (int i = 0; i < values.size(); i++) {
-            sum += std::get<0>(values[i]);
-            if (tid < sum) {
-                if (std::get<0>(values[i]) > 1) {
+        unsigned int sum = 0;
+        for (unsigned int i = 0; i < values.size(); i++) {                 
+            sum += std::get<0>(values[i]);                                          //Häufigkeiten aufsummieren
+            if (sum > tid) {                                                        //falls zu ersetzender Wert gefunden wurde:
+                if (std::get<0>(values[i]) > 1) {                                   //falls Häufigkeit > 1, um 1 reduziere
                     std::get<0>(values[i])--;
                     cntElements--;
                     return;
                 }
-                if (std::get<1>(values[i - 1]) == std::get<1>(values[i + 1])) {
-                    std::get<0>(values[i - 1]) += std::get<0>(values[i + 1]);
+                if (std::get<1>(values[i - 1]) == std::get<1>(values[i + 1])) {     //falls vor und nach dem Wert der gleiche Wert steht, 
+                    std::get<0>(values[i - 1]) += std::get<0>(values[i + 1]);       //  zusammenfügen und Wert entfernen
                     values.erase(values.begin() + i + 1);
                     values.erase(values.begin() + i);
                     cntElements--;
                     return;
                 }
-                values.erase(values.begin() + i);
+                values.erase(values.begin() + i);                                   //sonst Wert entfernen
                 cntElements--;
                 return;
             }
@@ -222,8 +226,8 @@ namespace CoGaDB {
     template<class T>
     void RunLengthCompressedColumn<T>::remove(PositionList &tid) {
         //TODO: implement
-        for (int i = 0; i < tid->size(); i++) {
-            this->remove((tid)[i]);
+        for (unsigned int tid_: tid) {    
+            this->remove(tid_);               //an eigentliche remove-Funktion übergeben
         }
         return;
     }
@@ -239,6 +243,7 @@ namespace CoGaDB {
     template<class T>
     void RunLengthCompressedColumn<T>::store(const std::string &path) {
         //TODO: implement
+        /*
         std::string path_(path);
         path_ += "/";
         path_ += this->name;
@@ -250,12 +255,23 @@ namespace CoGaDB {
 
         outfile.flush();
         outfile.close();
+        */
+
+       
+        std::string path_(path);
+         path_ += this->name_;
+
+        std::ofstream outfile(path_.c_str(), std::ofstream::binary | std::ofstream::out | std::ofstream::trunc);
+        assert(outfile.is_open());
+        cereal::PortableBinaryOutputArchive oarchive(outfile); // Create an output archive
+        oarchive(values); 
         return;
     }
 
     template<class T>
     void RunLengthCompressedColumn<T>::load(const std::string &path) {
         //TODO: implement
+        /*
         std::string path_(path);
         path_ += "/";
         path_ += this->name;
@@ -268,21 +284,36 @@ namespace CoGaDB {
         cntElements = 0;
         for(int i = 0; i < values.size();i++){
             cntElements += std::get<0>(values[i]);
-        }
-        return;
-    }
+        }  
+        */
 
+
+        std::string path_(path);
+         path_ += this->name_;
+
+        std::ifstream infile(path_.c_str(), std::ifstream::binary | std::ifstream::in);
+        cereal::PortableBinaryInputArchive ia(infile);
+        ia(values);
+
+        cntElements = 0;
+        for(unsigned int i = 0; i < values.size(); i++) {
+            cntElements += std::get<0>(values[i]);
+        } 
+        return;
+
+    }
+        
 
     template<class T>
     T RunLengthCompressedColumn<T>::operator[](const int index) {
         //TODO: implement
         static T val;
-        if (cntElements > index) {
+        if ((int) cntElements > index) {
             int sum = 0;
-            for (int i = 0; i < values.size(); i++) {
+            for (unsigned int i = 0; i < values.size(); i++) {                   //Häufigkeiten aufsummieren
                 sum += std::get<0>(values[i]);
 
-                if (index < sum) {
+                if (sum > index) {                                      //falls Wert gefunden, ausgeben
                     val = std::get<1>(values[i]);
                     return val;
                 }

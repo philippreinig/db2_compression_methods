@@ -16,6 +16,8 @@
 #include <random>
 #include <string>
 
+#include <cmath>
+
 using namespace CoGaDB;
 
 constexpr static auto SEED = 0;
@@ -71,7 +73,7 @@ class ColumnComparator : public Catch::Matchers::MatcherBase<Column> {
     // Performs the test for this matcher
     bool match( Column const& col) const override {
         if (ref_data.size() != col.size()) {
-            std::cerr << "Size mismatch!" << std::endl;
+            std::cerr << "Size mismatch!\nSize of reference_data: " << ref_data.size() << "\nSize of column: " << col.size() << std::endl;
             return false;
         }
         for (unsigned int i = 0; i < ref_data.size(); i++)

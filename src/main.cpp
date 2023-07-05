@@ -10,6 +10,10 @@
 #include <string>                               // for string
 #include <vector>                               // for vector
 
+#include "../include/compression/delta_encoded_column.hpp"
+#include "../include/compression/run_length_compressed_column.hpp"
+#include "../include/compression/dictionary_compressed_column.hpp"
+
 namespace CoGaDB {
     class ColumnBase;
 }
@@ -31,12 +35,16 @@ using namespace CoGaDB;
 TEMPLATE_PRODUCT_TEST_CASE_METHOD(Column_Test_Fixture,
                                   "Template test case method with test types specified inside std::tuple",
                                   "[class][template]",
-                                  (Column /*TODO: insert your column types here, separated by comma*/),
-                                  (int, float, std::string)) {
+                                  (DeltaEncodedColumn /*TODO: insert your column types here, separated by comma*/),
+                                  (int, float)) {
+
     using ValueType = typename Column_Test_Fixture<TestType>::ValueType;
+
     auto &col_one = Column_Test_Fixture<TestType>::col_one;
     auto &col_two = Column_Test_Fixture<TestType>::col_two;
     auto &reference_data = Column_Test_Fixture<TestType>::reference_data;
+
+    std::cout << " ----- Running insert tests -----" << std::endl;
 
     /****** INSERT TEST ******/
     REQUIRE_NOTHROW(fill_column<ValueType>(col_one, reference_data));
@@ -44,11 +52,19 @@ TEMPLATE_PRODUCT_TEST_CASE_METHOD(Column_Test_Fixture,
     REQUIRE(reference_data.size() == col_one.size());
     REQUIRE_THAT(col_one, isEqual<TestType>(reference_data));
 
+    std::cout << " ----- Insert tests done ----- " << std::endl;
+
+    std::cout << " ----- Running virtual copy constructor tests ----- " << std::endl;
+
     /****** VIRTUAL COPY CONSTRUCTOR TEST ******/
     std::unique_ptr<ColumnBase> copy = col_one.copy();
     REQUIRE(copy);
     auto &cpy = dynamic_cast<TestType &>(*copy);
     REQUIRE(cpy == col_one);
+
+    std::cout << " ----- Virtual copy constructor tests done ----- " << std::endl;
+
+    std::cout << " ----- Running update tests ----- " << std::endl;
 
     /****** UPDATE TEST ******/
     std::uniform_int_distribution dist(0, 100);
@@ -60,6 +76,12 @@ TEMPLATE_PRODUCT_TEST_CASE_METHOD(Column_Test_Fixture,
     REQUIRE_NOTHROW(col_one.update(tid, new_value));
     REQUIRE_THAT(col_one, isEqual<TestType>(reference_data));
 
+    std::cout << " ----- Update tests done ----- " << std::endl;
+
+    std::cout << " ----- Running delete tests ----- " << std::endl;
+
+    // std::cout << col_one.print() << std::endl;
+
     /****** DELETE TEST ******/
     tid = dist(gen);
 
@@ -68,11 +90,21 @@ TEMPLATE_PRODUCT_TEST_CASE_METHOD(Column_Test_Fixture,
     REQUIRE_NOTHROW(col_one.remove(tid));
     REQUIRE_THAT(col_one, isEqual<TestType>(reference_data));
 
+    std::cout << " ----- Delete tests done ----- " << std::endl;
+
+    std::cout << " ----- Running store and load tests ----- " << std::endl;
+
+
     /****** STORE AND LOAD TEST ******/
     REQUIRE_NOTHROW(col_one.store(DATA_PATH));
     col_one.clearContent();
     REQUIRE(col_one.size() == 0);
 
+    std::cout << "Store test done" << std::endl;
+
     REQUIRE_NOTHROW(col_two.load(DATA_PATH));
     REQUIRE_THAT(col_two, isEqual<TestType>(reference_data));
+
+    std::cout << " ----- Store and load tests done ----- " << std::endl;
+    
 }
